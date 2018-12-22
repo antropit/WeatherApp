@@ -6,4 +6,16 @@
     <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
+    <string name="search">Search</string>
+    <string name="feedbackForm">Форма обратной связи</string>
+    <string name="sendToDeveloper">О разработчике</string>
+    <string name="communicate">Communicate</string>
+    <string name="importItem">Import</string>
+    <string name="galleryItem">Gallery</string>
+    <string name="slideshowItem">Slideshow</string>
+    <string name="toolsItem">Tools</string>
+    <string name="login">Login</string>
+    <string name="name">Name</string>
+    <string name="email">Email</string>
+    <string name="phone">Phone</string>
 </resources>
