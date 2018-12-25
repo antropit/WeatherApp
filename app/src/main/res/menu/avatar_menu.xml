@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/chooseAvatarFromCamera"
+        android:title="@string/choose_from_camera"
+        android:icon="@drawable/ic_menu_camera"/>
+    <item android:id="@+id/chooseAvatarFromGalery"
+        android:title="@string/choose_from_galery"
+        android:icon="@drawable/ic_menu_gallery"/>
+    <item android:id="@+id/chooseAvatarFromWeb"
+        android:title="@string/open_from_web"
+        android:icon="@drawable/ic_public_black_24dp"/>
+</menu>

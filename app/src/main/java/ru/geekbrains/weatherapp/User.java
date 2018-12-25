@@ -1,6 +1,12 @@
 package ru.geekbrains.weatherapp;
 
+import android.content.res.Resources;
+import android.graphics.drawable.Drawable;
 import android.media.Image;
+import android.net.Uri;
+import android.provider.MediaStore;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.res.ResourcesCompat;
 
 import java.net.URI;
 import java.net.URL;
@@ -8,8 +14,7 @@ import java.net.URL;
 class User {
     private String userName;
     private String userEmail;
-    private String userPhone;
-    private URI userAvatar;
+    private Uri userAvatarUri;
 
 
     User (String userName, String userEmail) {
@@ -17,17 +22,10 @@ class User {
         setUserEmail(userEmail);
     }
 
-    User (String userName, String userEmail, String userPhone) {
+    User (String userName, String userEmail, Uri userAvatarUri) {
         setUserName(userName);
         setUserEmail(userEmail);
-        setUserPhone(userPhone);
-    }
-
-    User (String userName, String userEmail, String userPhone, URI userAvatar) {
-        setUserName(userName);
-        setUserEmail(userEmail);
-        setUserPhone(userPhone);
-        setUserAvatar(userAvatar);
+        setUserAvatarUri(userAvatarUri);
     }
 
     public String getUserName() {
@@ -46,15 +44,14 @@ class User {
         this.userEmail = emailAddress;
     }
 
-    public String getUserPhone() { return userPhone; }
-
-    public void setUserPhone(String userPhone) { this.userPhone = userPhone; }
-
-    public URI getUserAvatar() {
-        return userAvatar;
+    public Uri getUserAvatarUri() {
+        if (userAvatarUri == null) {
+            return Uri.parse("http://img3.wikia.nocookie.net/__cb20131019015927/marvelheroes/images/b/b1/Spiderman_Superior.png");
+        }
+        return userAvatarUri;
     }
 
-    public void setUserAvatar(URI userAvatar) {
-        this.userAvatar = userAvatar;
+    public void setUserAvatarUri(Uri userAvatarUri) {
+        this.userAvatarUri = userAvatarUri;
     }
 }
