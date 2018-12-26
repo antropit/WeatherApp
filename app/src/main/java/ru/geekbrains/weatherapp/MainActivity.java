@@ -165,6 +165,11 @@ public class MainActivity extends AppCompatActivity
             case R.id.ivAvatarOptions:
                 chooseAvatarPopupShow(view);
                 break;
+            case R.id.btnOpenSensors:
+                Intent intent = new Intent(this, SensorActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+                break;
         }
 
         updateDrawer();
