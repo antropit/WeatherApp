@@ -3,9 +3,12 @@ package ru.geekbrains.weatherapp;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
+import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.provider.MediaStore;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.util.Log;
@@ -18,10 +21,14 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.PopupMenu;
+import android.widget.Toast;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URI;
 
@@ -41,7 +48,9 @@ public class MainActivity extends AppCompatActivity
                              AVATAR_FROM_WEB = 30;
 
     private NavigationView navigationView;
-    ImageView ivAvatar;
+    private ImageView ivAvatar;
+    private EditText etName, etEmail;
+    private Button btnSubmit;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -68,7 +77,13 @@ public class MainActivity extends AppCompatActivity
         navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        ivAvatar = navigationView.getHeaderView(0).findViewById(R.id.ivAvatar);
+        View navViewHeader = navigationView.getHeaderView(0);
+
+        ivAvatar = navViewHeader.findViewById(R.id.ivAvatar);
+        etName = navViewHeader.findViewById(R.id.etUserName);
+        etEmail = navViewHeader.findViewById(R.id.etUserEmail);
+        btnSubmit = navViewHeader.findViewById(R.id.btnSubmit);
+
 
         //fix, не работает ни AvatarView ни ImageView DrawerLayout avt, imgView is null
 //        AvatarView avt = findViewById(R.id.avAvatar);
@@ -112,7 +127,7 @@ public class MainActivity extends AppCompatActivity
 
     @SuppressWarnings("StatementWithEmptyBody")
     @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
@@ -140,18 +155,15 @@ public class MainActivity extends AppCompatActivity
         switch(view.getId()) {
             case R.id.btnSubmit:
                 submited = true;
-                EditText etName = findViewById(R.id.etUserName),
-                        etEmail = findViewById(R.id.etUserEmail);
 
-                //TO DO
-                // add avatar Uri into constructor params
-                user = new User(etName.getText().toString(), etEmail.getText().toString());
+                //TODO: add avatar Uri into constructor params
+                user = new User(etName.getText().toString(), etEmail.getText().toString(), Uri.parse(ivAvatar.toString()));
                 setPrefs();
                 updateDrawer();
                 break;
             case R.id.ivAvatar:
             case R.id.ivAvatarOptions:
-                chooseAvatar(view);
+                chooseAvatarPopupShow(view);
                 break;
         }
 
@@ -164,16 +176,22 @@ public class MainActivity extends AppCompatActivity
 
         switch(item.getItemId()) {
             case R.id.chooseAvatarFromCamera:
-                intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                startActivityForResult(intent, AVATAR_FROM_CAMERA);
+                try {
+                    StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
+                    StrictMode.setVmPolicy(builder.build());
+
+                    File tempFile = File.createTempFile("avatar", ".jpg");
+                    Uri uri = Uri.fromFile(new File(tempFile.getAbsolutePath()));
+                    intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+                    startActivityForResult(intent, AVATAR_FROM_CAMERA);
+                } catch (IOException e) {
+                    Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                }
                 break;
             case R.id.chooseAvatarFromGalery:
                 intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
                 startActivityForResult(intent, AVATAR_FROM_GALLERY);
-                break;
-            case R.id.chooseAvatarFromWeb:
-                intent = new Intent(Intent.ACTION_PICK, Uri.parse("http://img3.wikia.nocookie.net/__cb20131019015927/marvelheroes/images/b/b1/Spiderman_Superior.png"));
-                startActivityForResult(intent, AVATAR_FROM_WEB);
                 break;
                 default: return false;
         }
@@ -181,7 +199,7 @@ public class MainActivity extends AppCompatActivity
         return true;
     }
 
-    public void chooseAvatar(View view) {
+    public void chooseAvatarPopupShow(View view) {
         PopupMenu popupMenu = new PopupMenu(this, view);
         popupMenu.inflate(R.menu.avatar_menu);
 
@@ -208,22 +226,32 @@ public class MainActivity extends AppCompatActivity
         //String name = data.getStringExtra("name");
         switch(requestCode) {
             case AVATAR_FROM_CAMERA:
+                if (resultCode == RESULT_OK) {
+                    Bitmap photo = (Bitmap) data.getExtras().get("data");
+                    ivAvatar.setImageBitmap(photo);
+
+                    setUserAvatarUri((Uri) data.getExtras().get(MediaStore.EXTRA_OUTPUT));
+                }
             case AVATAR_FROM_GALLERY:
                 if (resultCode == RESULT_OK) {
-                    setAvatarFromGallery(ivAvatar, data);
-                    if (user == null) {
-                        EditText etName = findViewById(R.id.etUserName),
-                                etEmail = findViewById(R.id.etUserEmail);
-                        user = new User(etName.getText().toString(), etEmail.getText().toString(), data.getData());
-                    } else user.setUserAvatarUri(data.getData());
+                    //setAvatarFromGallery(ivAvatar, data);
+                    ivAvatar.setImageURI(data.getData());
+
+                    setUserAvatarUri(data.getData());
                 }
                 break;
-            case AVATAR_FROM_WEB:
+            case AVATAR_FROM_WEB: //TODO get avatar from web
                 break;
         }
     }
 
-    public void setAvatarFromGallery(ImageView v, Intent data) {
+    private void setUserAvatarUri(Uri userAvatarUri) {
+        if (user == null) {
+            user = new User(etName.getText().toString(), etEmail.getText().toString(), userAvatarUri);
+        } else user.setUserAvatarUri(userAvatarUri);
+    }
+
+//    public void setAvatarFromGallery(ImageView v, Intent data) {
 //        Uri uri = data.getData();
 //        String[] projection = {MediaStore.Images.Media.DATA};
 //        Cursor cursor = getContentResolver().query(uri, projection, null, null);
@@ -232,13 +260,11 @@ public class MainActivity extends AppCompatActivity
 //        int columnIndex = cursor.getColumnIndex(projection[0]);
 //        String filePath = cursor.getString(columnIndex);
 //        cursor.close();
-
-        v.setImageURI(data.getData());
-    }
+//    }
 
     public void loadPrefs() {
         sPref = getPreferences(MODE_PRIVATE);
-        user = new User(sPref.getString(USER_NAME, ""), sPref.getString(USER_EMAIL, ""), Uri.parse(sPref.getString(USER_AVATAR, "")));
+        user = new User(sPref.getString(USER_NAME, ""), sPref.getString(USER_EMAIL, ""), Uri.parse(sPref.getString(USER_AVATAR, "@mipmap/ic_launcher_round")));
 
         updateDrawer();
     }
@@ -257,15 +283,23 @@ public class MainActivity extends AppCompatActivity
 
         if (user != null) {
             Uri uri = user.getUserAvatarUri();
-            if (!uri.toString().equals("")) ivAvatar.setImageURI(user.getUserAvatarUri());
+            if (!uri.toString().equals("")) {
+                ivAvatar.setImageURI(uri);
+            }
+            if (etName.getText().toString().equals("")) etName.setText(user.getUserName());
+            if (etEmail.getText().toString().equals("")) etEmail.setText(user.getUserEmail());
         }
 
         if (submited) {
-//            TextView tvUserName = findViewById(R.id.tvUserName),
-//                     tvUserEmail = findViewById(R.id.tvUserEmail);
-
-//            tvUserName.setText(user.getUserName());
-//            tvUserEmail.setText(user.getUserEmail());
+            etName.setEnabled(false);
+            etEmail.setEnabled(false);
+            btnSubmit.setVisibility(View.INVISIBLE);
+            //TODO btnSubmit.setHeight(0);
+        } else {
+            etName.setEnabled(true);
+            etEmail.setEnabled(true);
+            btnSubmit.setVisibility(View.VISIBLE);
+            //TODO btnSubmit.setHeight(wrap_content);
         }
     }
 }

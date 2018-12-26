@@ -6,7 +6,4 @@
     <item android:id="@+id/chooseAvatarFromGalery"
         android:title="@string/choose_from_galery"
         android:icon="@drawable/ic_menu_gallery"/>
-    <item android:id="@+id/chooseAvatarFromWeb"
-        android:title="@string/open_from_web"
-        android:icon="@drawable/ic_public_black_24dp"/>
 </menu>
