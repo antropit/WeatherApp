@@ -4,20 +4,41 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.View;
 
 public class WeatherDataView extends View {
 
     private final static String TAG = "WeatherDataView";
+    private final static int STROKE_WIDTH = 5;
     private Paint paint;
 
+    //TODO create custom view of weather data
+    //
     public WeatherDataView(Context context) {
         super(context);
+        init();
+    }
+
+    // Вызывается при вставке элемента в макет
+    public WeatherDataView(Context context, AttributeSet attrs) {
+        super(context, attrs);
+        init();
+    }
+
+    // Вызывается при вставке элемента в макет, если был добавлен стиль
+    public WeatherDataView(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        init();
+    }
+
+    private void init(){
         Log.d(TAG, "Constructor");
         paint = new Paint();
         paint.setColor(Color.BLUE);
-        paint.setStyle(Paint.Style.FILL);
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(STROKE_WIDTH);
     }
 
     @Override
@@ -54,7 +75,11 @@ public class WeatherDataView extends View {
     protected void onDraw(Canvas canvas){
         Log.d(TAG, "onDraw");
         super.onDraw(canvas);
-        canvas.drawCircle(200, 200, 200, paint);
+
+        int[] location = new int[2];
+        getLocationOnScreen(location);
+
+        canvas.drawCircle(location[0], location[1], 200, paint);
     }
 
     @Override
