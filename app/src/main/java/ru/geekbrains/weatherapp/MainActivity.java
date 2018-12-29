@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity
                              AVATAR_FROM_WEB = 30;
 
     private NavigationView navigationView;
+    private View navViewHeader;
     private ImageView ivAvatar;
     private EditText etName, etEmail;
     private Button btnSubmit;
@@ -77,7 +78,7 @@ public class MainActivity extends AppCompatActivity
         navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        View navViewHeader = navigationView.getHeaderView(0);
+        navViewHeader = navigationView.getHeaderView(0);
 
         ivAvatar = navViewHeader.findViewById(R.id.ivAvatar);
         etName = navViewHeader.findViewById(R.id.etUserName);
@@ -157,7 +158,12 @@ public class MainActivity extends AppCompatActivity
                 submited = true;
 
                 //TODO: add avatar Uri into constructor params
-                user = new User(etName.getText().toString(), etEmail.getText().toString(), Uri.parse(ivAvatar.toString()));
+                if (user == null) {
+                    user = new User(etName.getText().toString(), etEmail.getText().toString());
+                } else {
+                    user.setUserName(etName.getText().toString());
+                    user.setUserName(etEmail.getText().toString());
+                }
                 setPrefs();
                 updateDrawer();
                 break;
@@ -287,10 +293,10 @@ public class MainActivity extends AppCompatActivity
         if (submited && user == null) submited = false;
 
         if (user != null) {
-            Uri uri = user.getUserAvatarUri();
-            if (!uri.toString().equals("")) {
-                ivAvatar.setImageURI(uri);
-            }
+            //TODO fix "Permission Denial: opening provider com.google.android.apps.photos.contentprovider.impl.MediaContentProvider"
+            //Uri uri = user.getUserAvatarUri();
+            //if (!uri.toString().equals("")) ivAvatar.setImageURI(Uri.parse(uri.toString()));
+
             if (etName.getText().toString().equals("")) etName.setText(user.getUserName());
             if (etEmail.getText().toString().equals("")) etEmail.setText(user.getUserEmail());
         }
@@ -298,12 +304,12 @@ public class MainActivity extends AppCompatActivity
         if (submited) {
             etName.setEnabled(false);
             etEmail.setEnabled(false);
-            btnSubmit.setVisibility(View.INVISIBLE);
-            //TODO btnSubmit.setHeight(0);
+            btnSubmit.setEnabled(false);
+            btnSubmit.setHeight(2);
         } else {
             etName.setEnabled(true);
             etEmail.setEnabled(true);
-            btnSubmit.setVisibility(View.VISIBLE);
+            btnSubmit.setEnabled(true);
             //TODO btnSubmit.setHeight(wrap_content);
         }
     }
