@@ -19,8 +19,10 @@ import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
+import android.support.v7.widget.SearchView;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -48,6 +50,7 @@ public class MainActivity extends AppCompatActivity
                              AVATAR_FROM_WEB = 30;
 
     private NavigationView navigationView;
+    private View navViewHeader;
     private ImageView ivAvatar;
     private EditText etName, etEmail;
     private Button btnSubmit;
@@ -77,13 +80,12 @@ public class MainActivity extends AppCompatActivity
         navigationView = findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(this);
 
-        View navViewHeader = navigationView.getHeaderView(0);
+        navViewHeader = navigationView.getHeaderView(0);
 
         ivAvatar = navViewHeader.findViewById(R.id.ivAvatar);
         etName = navViewHeader.findViewById(R.id.etUserName);
         etEmail = navViewHeader.findViewById(R.id.etUserEmail);
         btnSubmit = navViewHeader.findViewById(R.id.btnSubmit);
-
 
         //fix, не работает ни AvatarView ни ImageView DrawerLayout avt, imgView is null
 //        AvatarView avt = findViewById(R.id.avAvatar);
@@ -107,6 +109,36 @@ public class MainActivity extends AppCompatActivity
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.main, menu);
+
+        MenuItem search = menu.findItem(R.id.action_search);
+        SearchView searchText = (SearchView) search.getActionView();
+        searchText.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                final WebView webView = findViewById(R.id.browse);
+                final RequestMaker requestMaker = new RequestMaker(new RequestMaker.OnRequestListener() {
+                    // Обновим прогресс
+                    @Override
+                    public void onStatusProgress(String updateProgress) {
+                        Toast.makeText(getApplication(), updateProgress, Toast.LENGTH_SHORT).show();
+                    }
+                    // По окончании загрузки страницы вызовем этот метод, который и вставит текст в WebView
+                    @Override
+                    public void onComplete(String result) {
+                        webView.loadData(result, "text/html; charset=utf-8", "utf-8");
+                    }
+                });
+
+                requestMaker.make(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
+
         return true;
     }
 
@@ -115,11 +147,13 @@ public class MainActivity extends AppCompatActivity
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        switch (item.getItemId()){
+            case R.id.action_sensors:
+                Intent intent = new Intent(this, SensorActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(intent);
+            case R.id.action_settings:
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -157,18 +191,18 @@ public class MainActivity extends AppCompatActivity
                 submited = true;
 
                 //TODO: add avatar Uri into constructor params
-                user = new User(etName.getText().toString(), etEmail.getText().toString(), Uri.parse(ivAvatar.toString()));
+                if (user == null) {
+                    user = new User(etName.getText().toString(), etEmail.getText().toString());
+                } else {
+                    user.setUserName(etName.getText().toString());
+                    user.setUserName(etEmail.getText().toString());
+                }
                 setPrefs();
                 updateDrawer();
                 break;
             case R.id.ivAvatar:
             case R.id.ivAvatarOptions:
                 chooseAvatarPopupShow(view);
-                break;
-            case R.id.btnOpenSensors:
-                Intent intent = new Intent(this, SensorActivity.class);
-                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                startActivity(intent);
                 break;
         }
 
@@ -287,10 +321,10 @@ public class MainActivity extends AppCompatActivity
         if (submited && user == null) submited = false;
 
         if (user != null) {
-            Uri uri = user.getUserAvatarUri();
-            if (!uri.toString().equals("")) {
-                ivAvatar.setImageURI(uri);
-            }
+            //TODO fix "Permission Denial: opening provider com.google.android.apps.photos.contentprovider.impl.MediaContentProvider"
+            //Uri uri = user.getUserAvatarUri();
+            //if (!uri.toString().equals("")) ivAvatar.setImageURI(Uri.parse(uri.toString()));
+
             if (etName.getText().toString().equals("")) etName.setText(user.getUserName());
             if (etEmail.getText().toString().equals("")) etEmail.setText(user.getUserEmail());
         }
@@ -298,13 +332,11 @@ public class MainActivity extends AppCompatActivity
         if (submited) {
             etName.setEnabled(false);
             etEmail.setEnabled(false);
-            btnSubmit.setVisibility(View.INVISIBLE);
-            //TODO btnSubmit.setHeight(0);
+            btnSubmit.setVisibility(View.GONE);
         } else {
             etName.setEnabled(true);
             etEmail.setEnabled(true);
             btnSubmit.setVisibility(View.VISIBLE);
-            //TODO btnSubmit.setHeight(wrap_content);
         }
     }
 }
