@@ -2,7 +2,6 @@ package ru.geekbrains.weatherapp;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -32,7 +31,6 @@ import android.widget.Toast;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.net.URI;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, View.OnClickListener, PopupMenu.OnMenuItemClickListener {
@@ -44,6 +42,7 @@ public class MainActivity extends AppCompatActivity
     private static final String USER_AVATAR = "USER_AVATAR";
     private static final String USER_NAME = "USER_NAME";
     private static final String USER_EMAIL = "USER_EMAIL";
+    private static final String LAST_SEARCH = "LAST_SEARCH";
 
     private static final int AVATAR_FROM_CAMERA = 10,
                              AVATAR_FROM_GALLERY = 20,
@@ -54,6 +53,8 @@ public class MainActivity extends AppCompatActivity
     private ImageView ivAvatar;
     private EditText etName, etEmail;
     private Button btnSubmit;
+
+    private String lastSearchStr;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -96,6 +97,12 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        setPrefs();
+    }
+
+    @Override
     public void onBackPressed() {
         DrawerLayout drawer = findViewById(R.id.drawer_layout);
         if (drawer.isDrawerOpen(GravityCompat.START)) {
@@ -115,21 +122,13 @@ public class MainActivity extends AppCompatActivity
         searchText.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                final WebView webView = findViewById(R.id.browse);
-                final RequestMaker requestMaker = new RequestMaker(new RequestMaker.OnRequestListener() {
-                    // Обновим прогресс
-                    @Override
-                    public void onStatusProgress(String updateProgress) {
-                        Toast.makeText(getApplication(), updateProgress, Toast.LENGTH_SHORT).show();
-                    }
-                    // По окончании загрузки страницы вызовем этот метод, который и вставит текст в WebView
-                    @Override
-                    public void onComplete(String result) {
-                        webView.loadData(result, "text/html; charset=utf-8", "utf-8");
-                    }
-                });
-
-                requestMaker.make(query);
+                if (query.matches("^http(s?):\\/\\/(\\w+(.)+)")) {
+                    getWeather(query, false);
+                } else {
+                    lastSearchStr = query;
+                    Toast.makeText(getApplication(),"Now search weather...", Toast.LENGTH_SHORT).show();
+                    getWeather(query, true);
+                }
                 return true;
             }
 
@@ -140,6 +139,26 @@ public class MainActivity extends AppCompatActivity
         });
 
         return true;
+    }
+
+    private void getWeather(String query, boolean weatherData) {
+        final WebView webView = findViewById(R.id.browse);
+        final RequestMaker requestMaker = new RequestMaker(new RequestMaker.OnRequestListener() {
+            // Обновим прогресс
+            @Override
+            public void onStatusProgress(String updateProgress) {
+                Toast.makeText(getApplication(), updateProgress, Toast.LENGTH_SHORT).show();
+            }
+            // По окончании загрузки страницы вызовем этот метод, который и вставит текст в WebView
+            @Override
+            public void onComplete(String result) {
+                //TODO if (weatherData) renderWeather
+                webView.loadData(result, "text/html; charset=utf-8", "utf-8");
+            }
+        });
+
+        if (weatherData) requestMaker.setWeatherRequest();
+        requestMaker.make(query);
     }
 
     @Override
@@ -195,7 +214,7 @@ public class MainActivity extends AppCompatActivity
                     user = new User(etName.getText().toString(), etEmail.getText().toString());
                 } else {
                     user.setUserName(etName.getText().toString());
-                    user.setUserName(etEmail.getText().toString());
+                    user.setUserEmail(etEmail.getText().toString());
                 }
                 setPrefs();
                 updateDrawer();
@@ -222,7 +241,14 @@ public class MainActivity extends AppCompatActivity
                     File tempFile = File.createTempFile("avatar", ".jpg");
                     Uri uri = Uri.fromFile(new File(tempFile.getAbsolutePath()));
                     intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                    intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    intent.setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                     intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+                    grantUriPermission(
+                            "com.google.android.GoogleCamera",
+                            uri,
+                            Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    );
                     startActivityForResult(intent, AVATAR_FROM_CAMERA);
                 } catch (IOException e) {
                     Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -266,6 +292,18 @@ public class MainActivity extends AppCompatActivity
         switch(requestCode) {
             case AVATAR_FROM_CAMERA:
                 if (resultCode == RESULT_OK) {
+                    //TODO fix camera avatar : open failed: EACCES (Permission denied)
+//                    018-12-30 15:04:17.943 22027-22027/? E/CAM_StateSavePic: exception while saving result to URI: Optional.of(file:///data/user/0/ru.geekbrains.weatherapp/cache/avatar3170511085545866042.jpg)
+//                    java.io.FileNotFoundException: open failed: EACCES (Permission denied)
+//                    at android.os.ParcelFileDescriptor.openInternal(ParcelFileDescriptor.java:313)
+//                    at android.os.ParcelFileDescriptor.open(ParcelFileDescriptor.java:211)
+//                    at android.content.ContentResolver.openAssetFileDescriptor(ContentResolver.java:1290)
+//                    at android.content.ContentResolver.openOutputStream(ContentResolver.java:1055)
+//                    at android.content.ContentResolver.openOutputStream(ContentResolver.java:1031)
+//                    at com.android.camera.captureintent.state.StateSavingPicture.onEnter(StateSavingPicture.java:85)
+//                    at com.android.camera.captureintent.stateful.StateMachineImpl.jumpToState(StateMachineImpl.java:62)
+//                    at com.android.camera.captureintent.stateful.StateMachineImpl.processEvent(StateMachineImpl.java:110)
+//                    at com.android.camera.captureintent.state.StateOpeningCamera$9.onClick(StateOpeningCamera.java:307)
                     Bitmap photo = (Bitmap) data.getExtras().get("data");
                     ivAvatar.setImageBitmap(photo);
 
@@ -305,6 +343,12 @@ public class MainActivity extends AppCompatActivity
         sPref = getPreferences(MODE_PRIVATE);
         user = new User(sPref.getString(USER_NAME, ""), sPref.getString(USER_EMAIL, ""), Uri.parse(sPref.getString(USER_AVATAR, "@mipmap/ic_launcher_round")));
 
+        lastSearchStr = sPref.getString(LAST_SEARCH, "");
+        if (!lastSearchStr.isEmpty()) {
+            setTitle(lastSearchStr);
+            getWeather(lastSearchStr, true);
+        }
+
         updateDrawer();
     }
 
@@ -314,6 +358,8 @@ public class MainActivity extends AppCompatActivity
         ed.putString(USER_NAME, user.getUserName());
         ed.putString(USER_EMAIL, user.getUserEmail());
         ed.putString(USER_AVATAR, user.getUserAvatarUri().toString());
+
+        ed.putString(LAST_SEARCH, lastSearchStr);
         ed.apply();
     }
 
