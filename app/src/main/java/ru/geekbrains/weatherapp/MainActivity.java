@@ -1,15 +1,20 @@
 package ru.geekbrains.weatherapp;
 
+import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
 import android.support.design.widget.NavigationView;
@@ -28,6 +33,9 @@ import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.Toast;
 
+import com.nostra13.universalimageloader.core.ImageLoader;
+import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -35,13 +43,15 @@ import java.lang.reflect.Field;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, View.OnClickListener, PopupMenu.OnMenuItemClickListener {
 
+    private static final int MY_PERMISSIONS_REQUEST = 100;
     private User user;
-    private boolean submited = false;
+    private boolean submitted = false;
 
     SharedPreferences sPref;
     private static final String USER_AVATAR = "USER_AVATAR";
     private static final String USER_NAME = "USER_NAME";
     private static final String USER_EMAIL = "USER_EMAIL";
+    private static final String USER_SUBMITTED = "USER_SUBMITTED";
     private static final String LAST_SEARCH = "LAST_SEARCH";
 
     private static final int AVATAR_FROM_CAMERA = 10,
@@ -97,8 +107,8 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    protected void onDestroy() {
-        super.onDestroy();
+    protected void onStop() {
+        super.onStop();
         setPrefs();
     }
 
@@ -152,8 +162,7 @@ public class MainActivity extends AppCompatActivity
             // По окончании загрузки страницы вызовем этот метод, который и вставит текст в WebView
             @Override
             public void onComplete(String result) {
-                //TODO if (weatherData) renderWeather
-                webView.loadData(result, "text/html; charset=utf-8", "utf-8");
+                webView.loadDataWithBaseURL(null, result, "text/html; charset=utf-8", "utf-8", null);
             }
         });
 
@@ -207,7 +216,7 @@ public class MainActivity extends AppCompatActivity
     public void onClick(View view) {
         switch(view.getId()) {
             case R.id.btnSubmit:
-                submited = true;
+                submitted = true;
 
                 //TODO: add avatar Uri into constructor params
                 if (user == null) {
@@ -238,8 +247,10 @@ public class MainActivity extends AppCompatActivity
                     StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
                     StrictMode.setVmPolicy(builder.build());
 
-                    File tempFile = File.createTempFile("avatar", ".jpg");
+                    File tempFile = File.createTempFile("avatar", ".jpg", getExternalFilesDir(Environment.DIRECTORY_PICTURES));
                     Uri uri = Uri.fromFile(new File(tempFile.getAbsolutePath()));
+                    setUserAvatarUri(uri);
+
                     intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
                     intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     intent.setFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
@@ -304,10 +315,17 @@ public class MainActivity extends AppCompatActivity
 //                    at com.android.camera.captureintent.stateful.StateMachineImpl.jumpToState(StateMachineImpl.java:62)
 //                    at com.android.camera.captureintent.stateful.StateMachineImpl.processEvent(StateMachineImpl.java:110)
 //                    at com.android.camera.captureintent.state.StateOpeningCamera$9.onClick(StateOpeningCamera.java:307)
-                    Bitmap photo = (Bitmap) data.getExtras().get("data");
-                    ivAvatar.setImageBitmap(photo);
 
-                    setUserAvatarUri((Uri) data.getExtras().get(MediaStore.EXTRA_OUTPUT));
+                    Bundle bndl = data.getExtras();
+                    if (bndl != null) {
+                        Bitmap photo = (Bitmap) bndl.get("data");
+                        ivAvatar.setImageBitmap(photo);
+
+                        setUserAvatarUri((Uri) data.getExtras().get(MediaStore.EXTRA_OUTPUT));
+                    } else {
+                        ivAvatar.setImageURI(user.getUserAvatarUri());
+                    }
+
                 }
             case AVATAR_FROM_GALLERY:
                 if (resultCode == RESULT_OK) {
@@ -343,6 +361,7 @@ public class MainActivity extends AppCompatActivity
         sPref = getPreferences(MODE_PRIVATE);
         user = new User(sPref.getString(USER_NAME, ""), sPref.getString(USER_EMAIL, ""), Uri.parse(sPref.getString(USER_AVATAR, "@mipmap/ic_launcher_round")));
 
+        submitted = sPref.getBoolean(USER_SUBMITTED, false);
         lastSearchStr = sPref.getString(LAST_SEARCH, "");
         if (!lastSearchStr.isEmpty()) {
             setTitle(lastSearchStr);
@@ -357,6 +376,7 @@ public class MainActivity extends AppCompatActivity
         SharedPreferences.Editor ed = sPref.edit();
         ed.putString(USER_NAME, user.getUserName());
         ed.putString(USER_EMAIL, user.getUserEmail());
+        ed.putBoolean(USER_SUBMITTED, submitted);
         ed.putString(USER_AVATAR, user.getUserAvatarUri().toString());
 
         ed.putString(LAST_SEARCH, lastSearchStr);
@@ -364,18 +384,29 @@ public class MainActivity extends AppCompatActivity
     }
 
     public void updateDrawer() {
-        if (submited && user == null) submited = false;
+        if (submitted && user == null) submitted = false;
 
         if (user != null) {
             //TODO fix "Permission Denial: opening provider com.google.android.apps.photos.contentprovider.impl.MediaContentProvider"
-            //Uri uri = user.getUserAvatarUri();
-            //if (!uri.toString().equals("")) ivAvatar.setImageURI(Uri.parse(uri.toString()));
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                // Permission is not granted
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST);
+            }
+
+            Uri uri = user.getUserAvatarUri();
+
+//            if (!uri.toString().equals("")) ivAvatar.setImageURI(Uri.parse(uri.toString()));
+            ImageLoader imageLoader = ImageLoader.getInstance(); // Получили экземпляр
+            imageLoader.init(ImageLoaderConfiguration.createDefault(this)); // Проинициализировали конфигом по умолчанию
+            imageLoader.displayImage(uri.getPath(), ivAvatar); // Запустили асинхронный показ картинки
 
             if (etName.getText().toString().equals("")) etName.setText(user.getUserName());
             if (etEmail.getText().toString().equals("")) etEmail.setText(user.getUserEmail());
         }
 
-        if (submited) {
+        if (submitted) {
             etName.setEnabled(false);
             etEmail.setEnabled(false);
             btnSubmit.setVisibility(View.GONE);

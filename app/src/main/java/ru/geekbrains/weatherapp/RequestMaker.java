@@ -81,7 +81,7 @@ public class RequestMaker {
                 publishProgress("City not found");
                 return "City not found";
             }
-            return jsonObject.toString();
+            return WeatherDataLoader.renderWeather(jsonObject);
         }
 
         // Обработка загрузки страницы
