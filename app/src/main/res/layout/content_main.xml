@@ -5,10 +5,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
-    tools:context=".MainActivity"
+    tools:context=".view.MainActivity"
     tools:showIn="@layout/app_bar_main">
 
-    <ru.geekbrains.weatherapp.WeatherDataView
+    <ru.geekbrains.weatherapp.view.WeatherDataView
         android:id="@+id/wdView"
         android:layout_width="122dp"
         android:layout_height="128dp"

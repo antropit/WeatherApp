@@ -1,4 +1,4 @@
-package ru.geekbrains.weatherapp;
+package ru.geekbrains.weatherapp.view;
 
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.widget.TextView;
 
 import java.util.List;
+
+import ru.geekbrains.weatherapp.R;
 
 public class SensorActivity extends AppCompatActivity {
 

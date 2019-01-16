@@ -1,4 +1,4 @@
-package ru.geekbrains.weatherapp;
+package ru.geekbrains.weatherapp.view;
 
 import android.Manifest;
 import android.content.Intent;
@@ -33,12 +33,15 @@ import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.Toast;
 
-import com.nostra13.universalimageloader.core.ImageLoader;
-import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.squareup.picasso.Picasso;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+
+import ru.geekbrains.weatherapp.R;
+import ru.geekbrains.weatherapp.RequestMaker;
+import ru.geekbrains.weatherapp.model.User;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, View.OnClickListener, PopupMenu.OnMenuItemClickListener {
@@ -330,7 +333,8 @@ public class MainActivity extends AppCompatActivity
             case AVATAR_FROM_GALLERY:
                 if (resultCode == RESULT_OK) {
                     //setAvatarFromGallery(ivAvatar, data);
-                    ivAvatar.setImageURI(data.getData());
+                    //ivAvatar.setImageURI(data.getData());
+                    Picasso.get().load(data.getData()).into(ivAvatar);
 
                     setUserAvatarUri(data.getData());
                 }
@@ -398,9 +402,7 @@ public class MainActivity extends AppCompatActivity
             Uri uri = user.getUserAvatarUri();
 
 //            if (!uri.toString().equals("")) ivAvatar.setImageURI(Uri.parse(uri.toString()));
-            ImageLoader imageLoader = ImageLoader.getInstance(); // Получили экземпляр
-            imageLoader.init(ImageLoaderConfiguration.createDefault(this)); // Проинициализировали конфигом по умолчанию
-            imageLoader.displayImage(uri.getPath(), ivAvatar); // Запустили асинхронный показ картинки
+            Picasso.get().load(uri).into(ivAvatar); // Запустили асинхронный показ картинки
 
             if (etName.getText().toString().equals("")) etName.setText(user.getUserName());
             if (etEmail.getText().toString().equals("")) etEmail.setText(user.getUserEmail());

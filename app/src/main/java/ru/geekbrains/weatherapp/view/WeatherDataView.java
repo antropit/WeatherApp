@@ -1,4 +1,4 @@
-package ru.geekbrains.weatherapp;
+package ru.geekbrains.weatherapp.view;
 
 import android.content.Context;
 import android.graphics.Canvas;

@@ -11,6 +11,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import ru.geekbrains.weatherapp.model.rest_models.WeatherRequestRestModel;
+import ru.geekbrains.weatherapp.model.rest_models.WeatherRestModel;
+
 // Делатель запросов (класс, умеющий запрашивать страницы)
 public class RequestMaker {
 
@@ -76,7 +79,8 @@ public class RequestMaker {
 
         //get weather data async
         private String updateWeatherData(String city) {
-            final JSONObject jsonObject = WeatherDataLoader.getJSONData(city);
+//            final JSONObject jsonObject = WeatherDataLoader.getJSONData(city);
+            final WeatherRequestRestModel jsonObject = WeatherDataLoader.requestRetrofit(city);
             if(jsonObject == null) {
                 publishProgress("City not found");
                 return "City not found";
