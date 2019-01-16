@@ -2,6 +2,10 @@ package ru.geekbrains.weatherapp;
 
 import android.os.AsyncTask;
 import android.util.Log;
+import android.widget.Toast;
+
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
@@ -9,6 +13,8 @@ import java.net.URL;
 
 // Делатель запросов (класс, умеющий запрашивать страницы)
 public class RequestMaker {
+
+    private boolean isWeatherRequest = false; //check if weather data needed
 
     // Слушатель, при помощи которого отправим обратный вызов о готовности страницы
     private OnRequestListener listener;
@@ -21,9 +27,13 @@ public class RequestMaker {
     // Сделать запрос
     public void make(String uri) {
         // Создаем объект асинхронной задачи (передаем ей слушатель)
-        Requester requester = new Requester(listener);
+        Requester requester = new Requester(listener, isWeatherRequest);
         // Запускаем асинхронную задачу
         requester.execute(uri);
+    }
+
+    public void setWeatherRequest() {
+        isWeatherRequest = true;
     }
 
     // Интерфейс слушателя с методами обратного вызова
@@ -36,8 +46,11 @@ public class RequestMaker {
     // Начальные и конечные методы работают в потоке UI, а основной метод расчета работает в фоне
     private static class Requester extends AsyncTask<String, String, String> {
         private OnRequestListener listener;
-        Requester(OnRequestListener listener) {
+        private boolean isWeatherRequest;
+
+        Requester(OnRequestListener listener, boolean weatherRequest) {
             this.listener = listener;
+            this.isWeatherRequest = weatherRequest;
         }
 
         // Обновление прогресса, работает в основном потоке UI
@@ -49,6 +62,8 @@ public class RequestMaker {
         // Выполнить таск в фоновом потоке
         @Override
         protected String doInBackground(String... strings) {
+            if (isWeatherRequest) return updateWeatherData(strings[0]);
+
             return getResourceUri(strings[0]);
         }
 
@@ -56,6 +71,17 @@ public class RequestMaker {
         @Override
         protected void onPostExecute(String content) {
             listener.onComplete(content);
+        }
+
+
+        //get weather data async
+        private String updateWeatherData(String city) {
+            final JSONObject jsonObject = WeatherDataLoader.getJSONData(city);
+            if(jsonObject == null) {
+                publishProgress("City not found");
+                return "City not found";
+            }
+            return WeatherDataLoader.renderWeather(jsonObject);
         }
 
         // Обработка загрузки страницы
