@@ -35,6 +35,7 @@ public class WeatherDataLoader {
     private static final String weather_drizzle = "&#xf01c;";
 
     private static WeatherRequestRestModel retrofitResult;
+    private static boolean requestDone;
 
     static JSONObject getJSONData(String city) {
         try {
@@ -65,27 +66,30 @@ public class WeatherDataLoader {
     }
 
     static WeatherRequestRestModel requestRetrofit(String city) {
+        retrofitResult = null; requestDone = false;
+
         OpenWeatherRepo.getAPI().loadWeather(city, OPEN_WEATHER_API_KEY)
                 .enqueue(new Callback<WeatherRequestRestModel>() {
                     @Override
                     public void onResponse(Call<WeatherRequestRestModel> call, Response<WeatherRequestRestModel> response) {
                         if (response.isSuccessful()) retrofitResult = response.body();
+                        requestDone = true;
                     }
 
                     @Override
                     public void onFailure(Call<WeatherRequestRestModel> call, Throwable t) {
-                        retrofitResult = null;
+                        requestDone = true;
                     }
                 });
 
-        while (retrofitResult == null) {
+        while (!requestDone) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         }
-        
+
         return retrofitResult;
     }
 
