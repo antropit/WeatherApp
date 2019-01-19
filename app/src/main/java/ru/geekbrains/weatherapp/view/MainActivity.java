@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -41,6 +42,7 @@ import java.lang.reflect.Field;
 
 import ru.geekbrains.weatherapp.R;
 import ru.geekbrains.weatherapp.RequestMaker;
+import ru.geekbrains.weatherapp.database.DatabaseHelper;
 import ru.geekbrains.weatherapp.model.User;
 
 public class MainActivity extends AppCompatActivity
@@ -49,6 +51,7 @@ public class MainActivity extends AppCompatActivity
     private static final int MY_PERMISSIONS_REQUEST = 100;
     private User user;
     private boolean submitted = false;
+    private SQLiteDatabase database;
 
     SharedPreferences sPref;
     private static final String USER_AVATAR = "USER_AVATAR";
@@ -106,6 +109,7 @@ public class MainActivity extends AppCompatActivity
 //        avt.bind("new user", "http://img3.wikia.nocookie.net/__cb20131019015927/marvelheroes/images/b/b1/Spiderman_Superior.png");
 //        ivAvatar = navigationView.getHeaderView(0).findViewById(R.id.ivAvatar);.setImageURI(Uri.parse("http://img3.wikia.nocookie.net/__cb20131019015927/marvelheroes/images/b/b1/Spiderman_Superior.png"));
 
+        initDatabase();
         loadPrefs();
     }
 
@@ -123,6 +127,11 @@ public class MainActivity extends AppCompatActivity
         } else {
             super.onBackPressed();
         }
+    }
+
+    private void initDatabase() {
+        DatabaseHelper databaseHelper = new DatabaseHelper(getApplicationContext());
+        database = databaseHelper.getWritableDatabase();
     }
 
     @Override
@@ -166,10 +175,14 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onComplete(String result) {
                 webView.loadDataWithBaseURL(null, result, "text/html; charset=utf-8", "utf-8", null);
+                if (!result.equals("City not found")) setTitle(lastSearchStr);
             }
         });
 
-        if (weatherData) requestMaker.setWeatherRequest();
+        if (weatherData) {
+            requestMaker.setWeatherRequest();
+            requestMaker.setDatabase(database);
+        }
         requestMaker.make(query);
     }
 
