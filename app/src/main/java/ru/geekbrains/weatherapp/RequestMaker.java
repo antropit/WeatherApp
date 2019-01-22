@@ -1,5 +1,6 @@
 package ru.geekbrains.weatherapp;
 
+import android.database.sqlite.SQLiteDatabase;
 import android.os.AsyncTask;
 import android.util.Log;
 import android.widget.Toast;
@@ -11,6 +12,9 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
+import ru.geekbrains.weatherapp.database.DatabaseHelper;
+import ru.geekbrains.weatherapp.database.WeatherDBTable;
+import ru.geekbrains.weatherapp.model.rest_models.MainRestModel;
 import ru.geekbrains.weatherapp.model.rest_models.WeatherRequestRestModel;
 import ru.geekbrains.weatherapp.model.rest_models.WeatherRestModel;
 
@@ -18,6 +22,7 @@ import ru.geekbrains.weatherapp.model.rest_models.WeatherRestModel;
 public class RequestMaker {
 
     private boolean isWeatherRequest = false; //check if weather data needed
+    private SQLiteDatabase database;
 
     // Слушатель, при помощи которого отправим обратный вызов о готовности страницы
     private OnRequestListener listener;
@@ -30,7 +35,7 @@ public class RequestMaker {
     // Сделать запрос
     public void make(String uri) {
         // Создаем объект асинхронной задачи (передаем ей слушатель)
-        Requester requester = new Requester(listener, isWeatherRequest);
+        Requester requester = new Requester(listener, isWeatherRequest, database);
         // Запускаем асинхронную задачу
         requester.execute(uri);
     }
@@ -39,6 +44,9 @@ public class RequestMaker {
         isWeatherRequest = true;
     }
 
+    public void setDatabase(SQLiteDatabase db) {
+        this.database = db;
+    }
     // Интерфейс слушателя с методами обратного вызова
     public interface OnRequestListener {
         void onStatusProgress(String updateProgress);   // Вызов для обновления прогресса
@@ -50,10 +58,12 @@ public class RequestMaker {
     private static class Requester extends AsyncTask<String, String, String> {
         private OnRequestListener listener;
         private boolean isWeatherRequest;
+        private SQLiteDatabase database;
 
-        Requester(OnRequestListener listener, boolean weatherRequest) {
+        Requester(OnRequestListener listener, boolean weatherRequest, SQLiteDatabase db) {
             this.listener = listener;
             this.isWeatherRequest = weatherRequest;
+            this.database = db;
         }
 
         // Обновление прогресса, работает в основном потоке UI
@@ -85,6 +95,11 @@ public class RequestMaker {
                 publishProgress("City not found");
                 return "City not found";
             }
+
+            MainRestModel main = jsonObject.mainRestModel;
+            main.temp -= 273.15; main.temp_max -= 273.15; main.temp_min -= 273.15;
+
+            WeatherDBTable.getInstance().addSite(database, jsonObject.name, jsonObject.weatherRestModel[0].id, main.temp, main.pressure, main.humidity);
             return WeatherDataLoader.renderWeather(jsonObject);
         }
 
