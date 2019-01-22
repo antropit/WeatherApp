@@ -1,9 +1,12 @@
-package ru.geekbrains.weatherapp;
+package ru.geekbrains.weatherapp.view;
 
 import android.Manifest;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -33,12 +36,16 @@ import android.widget.ImageView;
 import android.widget.PopupMenu;
 import android.widget.Toast;
 
-import com.nostra13.universalimageloader.core.ImageLoader;
-import com.nostra13.universalimageloader.core.ImageLoaderConfiguration;
+import com.squareup.picasso.Picasso;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+
+import ru.geekbrains.weatherapp.R;
+import ru.geekbrains.weatherapp.RequestMaker;
+import ru.geekbrains.weatherapp.database.DatabaseHelper;
+import ru.geekbrains.weatherapp.model.User;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener, View.OnClickListener, PopupMenu.OnMenuItemClickListener {
@@ -46,6 +53,7 @@ public class MainActivity extends AppCompatActivity
     private static final int MY_PERMISSIONS_REQUEST = 100;
     private User user;
     private boolean submitted = false;
+    private SQLiteDatabase database;
 
     SharedPreferences sPref;
     private static final String USER_AVATAR = "USER_AVATAR";
@@ -103,6 +111,7 @@ public class MainActivity extends AppCompatActivity
 //        avt.bind("new user", "http://img3.wikia.nocookie.net/__cb20131019015927/marvelheroes/images/b/b1/Spiderman_Superior.png");
 //        ivAvatar = navigationView.getHeaderView(0).findViewById(R.id.ivAvatar);.setImageURI(Uri.parse("http://img3.wikia.nocookie.net/__cb20131019015927/marvelheroes/images/b/b1/Spiderman_Superior.png"));
 
+        initDatabase();
         loadPrefs();
     }
 
@@ -120,6 +129,11 @@ public class MainActivity extends AppCompatActivity
         } else {
             super.onBackPressed();
         }
+    }
+
+    private void initDatabase() {
+        DatabaseHelper databaseHelper = new DatabaseHelper(getApplicationContext());
+        database = databaseHelper.getWritableDatabase();
     }
 
     @Override
@@ -163,10 +177,14 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onComplete(String result) {
                 webView.loadDataWithBaseURL(null, result, "text/html; charset=utf-8", "utf-8", null);
+                if (!result.equals("City not found")) setTitle(lastSearchStr);
             }
         });
 
-        if (weatherData) requestMaker.setWeatherRequest();
+        if (weatherData) {
+            requestMaker.setWeatherRequest();
+            requestMaker.setDatabase(database);
+        }
         requestMaker.make(query);
     }
 
@@ -330,7 +348,8 @@ public class MainActivity extends AppCompatActivity
             case AVATAR_FROM_GALLERY:
                 if (resultCode == RESULT_OK) {
                     //setAvatarFromGallery(ivAvatar, data);
-                    ivAvatar.setImageURI(data.getData());
+                    //ivAvatar.setImageURI(data.getData());
+                    Picasso.get().load(data.getData()).into(ivAvatar);
 
                     setUserAvatarUri(data.getData());
                 }
@@ -363,6 +382,7 @@ public class MainActivity extends AppCompatActivity
 
         submitted = sPref.getBoolean(USER_SUBMITTED, false);
         lastSearchStr = sPref.getString(LAST_SEARCH, "");
+        if (lastSearchStr.isEmpty()) lastSearchStr = "Moscow";
         if (!lastSearchStr.isEmpty()) {
             setTitle(lastSearchStr);
             getWeather(lastSearchStr, true);
@@ -397,10 +417,22 @@ public class MainActivity extends AppCompatActivity
 
             Uri uri = user.getUserAvatarUri();
 
-//            if (!uri.toString().equals("")) ivAvatar.setImageURI(Uri.parse(uri.toString()));
-            ImageLoader imageLoader = ImageLoader.getInstance(); // Получили экземпляр
-            imageLoader.init(ImageLoaderConfiguration.createDefault(this)); // Проинициализировали конфигом по умолчанию
-            imageLoader.displayImage(uri.getPath(), ivAvatar); // Запустили асинхронный показ картинки
+            if (uri.toString().matches("^content:\\/\\/(.)+")) {
+                //TODO Grant permission to avatar
+//                getContentResolver().takePersistableUriPermission(uri,
+//                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION
+//                );
+//                String[] projection = {MediaStore.Images.Media.DATA};
+//                Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
+//                cursor.moveToFirst();
+//
+//                int columnIndex = cursor.getColumnIndex(projection[0]);
+//                String filePath = cursor.getString(columnIndex);
+//                cursor.close();
+//
+//                Picasso.get().load(filePath).into(ivAvatar);
+            }
+//            Picasso.get().load(uri).into(ivAvatar); // Запустили асинхронный показ картинки
 
             if (etName.getText().toString().equals("")) etName.setText(user.getUserName());
             if (etEmail.getText().toString().equals("")) etEmail.setText(user.getUserEmail());
