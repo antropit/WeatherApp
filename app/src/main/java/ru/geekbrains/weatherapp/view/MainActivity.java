@@ -1,10 +1,12 @@
 package ru.geekbrains.weatherapp.view;
 
 import android.Manifest;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -380,6 +382,7 @@ public class MainActivity extends AppCompatActivity
 
         submitted = sPref.getBoolean(USER_SUBMITTED, false);
         lastSearchStr = sPref.getString(LAST_SEARCH, "");
+        if (lastSearchStr.isEmpty()) lastSearchStr = "Moscow";
         if (!lastSearchStr.isEmpty()) {
             setTitle(lastSearchStr);
             getWeather(lastSearchStr, true);
@@ -414,8 +417,22 @@ public class MainActivity extends AppCompatActivity
 
             Uri uri = user.getUserAvatarUri();
 
-//            if (!uri.toString().equals("")) ivAvatar.setImageURI(Uri.parse(uri.toString()));
-            Picasso.get().load(uri).into(ivAvatar); // Запустили асинхронный показ картинки
+            if (uri.toString().matches("^content:\\/\\/(.)+")) {
+                //TODO Grant permission to avatar
+//                getContentResolver().takePersistableUriPermission(uri,
+//                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION | Intent.FLAG_GRANT_READ_URI_PERMISSION
+//                );
+//                String[] projection = {MediaStore.Images.Media.DATA};
+//                Cursor cursor = getContentResolver().query(uri, projection, null, null, null);
+//                cursor.moveToFirst();
+//
+//                int columnIndex = cursor.getColumnIndex(projection[0]);
+//                String filePath = cursor.getString(columnIndex);
+//                cursor.close();
+//
+//                Picasso.get().load(filePath).into(ivAvatar);
+            }
+//            Picasso.get().load(uri).into(ivAvatar); // Запустили асинхронный показ картинки
 
             if (etName.getText().toString().equals("")) etName.setText(user.getUserName());
             if (etEmail.getText().toString().equals("")) etEmail.setText(user.getUserEmail());
